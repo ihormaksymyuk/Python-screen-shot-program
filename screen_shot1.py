@@ -1,75 +1,129 @@
 
 
-from tkinter import *
+
+    
 import tkinter as tk
-from tkinter import filedialog as fd
-from tkinter.colorchooser import *
+#from tkinter import filedialog as fd
+from tkinter import *  
 import tkinter.ttk as ttk
 from PIL import Image, ImageTk, ImageGrab
+import pyscreenshot as ImageGrab
+import pygame
+import win32api
+import win32con
+import win32gui
 from tkinter.filedialog import askdirectory, asksaveasfilename
-from random import *
-import pyperclip3 as pc
-from io import BytesIO
-import win32clipboard
+from tkinter.colorchooser import *
+import sys
+    
+#import pyperclip3 as pc
+#from io import BytesIO
+  
 
 
 
+def destroy():
+    root.destroy()
+ 
+root = tk.Tk()
+root.iconbitmap(r'screen.ico')
+b = tk.Button(root, text="Click to Capture screen",
+    fg='red',
+    bg='yellow',
+    font="Arial 16",
+    relief=tk.GROOVE ,
+    borderwidth=10,
+    command=root.destroy)
+b.pack()
+root.mainloop()
 
+def grab(x, y, w, h):
+    global done   
+    im = ImageGrab.grab(bbox=(x, y, w, h))
+    im.save('clipboard.jpg')
+    done = True
 
-
-
+pygame.init()
+info = pygame.display.Info()
+w = info.current_w
+h = info.current_h
+screen = pygame.display.set_mode((w, h), pygame.NOFRAME) # For borderless, use pygame.NOFRAME
+done = False
+fuchsia = (255, 0, 128)  # Transparency color
+ 
+# Create layered window
+hwnd = pygame.display.get_wm_info()["window"]
+win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE,
+                       win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
+# Set window transparency color
+# win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(*fuchsia), 0, win32con.LWA_COLORKEY)
+win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(*fuchsia), 50, win32con.LWA_ALPHA)
+ 
+click1 = 0
+x1 = 0
+y1 = 0
+x2 = 0
+y2 = 0
+while not done:
+    for event in pygame.event.get():
+       
+ 
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                # time.sleep(.1)
+                if click1 == 0:
+                    x1, y1 = pygame.mouse.get_pos()
+                    click1 = 1
+                elif click1 == 1:
+                    x2, y2 = pygame.mouse.get_pos()
+                    dx = x1 + (x2 - x1)
+                    dy = y1 + (y2 - y1)
+                    win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(*fuchsia), 0, win32con.LWA_ALPHA)
+                    grab(x1, y1, dx, dy)
+                    click1 = 0
+                    # Sh
+                    # done = True
+                    win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(*fuchsia), 50, win32con.LWA_ALPHA)
+                    x1 = 0
+                    y1 = 0
+                    x2 = 0
+                    y2 = 0
+                    #preview()
+                    #count_image = int(count_image)
+                    #count_image += 1
+ 
+    screen.fill((255, 255, 255))  # Transparent background
+    # show_text()
+    if click1 == 0:
+        mx, my = pygame.mouse.get_pos()
+        dx = 5
+        dy = 5
+    elif click1 == 1:
+        mx2, my2 = pygame.mouse.get_pos()
+        x2 = mx2 - x1
+        y2 = my2 - y1
+ 
+    pygame.draw.rect(screen, (0, 255, 255), pygame.Rect(mx, my, x2, y2))
+    pygame.display.update()
+if done == True:   
+    pygame.quit()
+    #sys.exit()
 color_w="white"
-
+im = Image.open("clipboard.jpg")
 window = tk.Tk()
-
-
-window.title("Screen Shot")
 window.iconbitmap(r'screen.ico')
-window.wm_attributes('-transparentcolor', 'snow')
-#window.geometry("750x250")
+window.title("Screen Shot")
 frame1 = tk.Frame(master=window, height=50, bg="light gray")
 frame1.pack(fill=tk.X)
-frame2 = tk.Frame(master=window, height=200, bg="light gray")
-frame2.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
-c = Canvas(master=window, width=600, height=450,bg='snow')
-
-
-
-frame3 = tk.Frame(master=frame2,width=100, bg="light gray", relief=tk.RIDGE)
-frame3.pack(fill=tk.Y, side=tk.LEFT)
+c = Canvas(master=window, width=600, height=450,bg="gray")
 c.pack( side=tk.LEFT,  padx=0, pady=0, expand=True)
-
-
+image = Image.open("clipboard.jpg")
+bg1 = ImageTk.PhotoImage(image)
+bg_size=image.size
+c.configure(width=bg_size[0], height=bg_size[1])
+c.create_image(0,0, image = bg1, anchor=NW)
+c.image = bg1
             
-
-
-def set_bg():
-    global data
-    global bg
-    box = (c.winfo_rootx(),c.winfo_rooty(),c.winfo_rootx()+c.winfo_width(),c.winfo_rooty() + c.winfo_height())
-    bg = ImageGrab.grab(bbox = box)
-    bg.save('im.png')
-    image = Image.open("im.png")
-    output = BytesIO()
-    image.convert("RGB").save(output, "BMP")
-    data = output.getvalue()[14:]
-    output.close()
-    save_to_clipboard(win32clipboard.CF_DIB, data)
-    bg1 = ImageTk.PhotoImage(bg)
-    bg_size=bg.size
-    c.configure(width=bg_size[0], height=bg_size[1])
-    c.create_image(0,0, image = bg1, anchor=NW)
-    c.image = bg1
-    image.save('clipboard.jpg')
-   
-def save_to_clipboard(clip_type, data):
-    win32clipboard.OpenClipboard()
-    win32clipboard.EmptyClipboard()
-    win32clipboard.SetClipboardData(clip_type, data)
-    win32clipboard.CloseClipboard()
-
-
-
 def change_color_b():
     global color_w
     colors = askcolor(title="Tkinter Color Chooser")
@@ -93,19 +147,16 @@ def save_as_jpg():
             grab.save(output_file)
             
         window.title(f"Простий графічний редактор - {filepath}")
-        print(c.winfo_rootx(), c.winfo_x())
-    
 
 menubar = Menu(window)
 file_menu = Menu(menubar, tearoff=0)
 file_menu.add_command(label="Експорт .jpg", command= save_as_jpg)
-file_menu.add_command(label="Скопіювати в буфер", command= save_to_clipboard)
 menubar.add_cascade(label="Файл", menu=file_menu)
 window.configure(menu=menubar)
 
 
-color_lab = tk.Label(master=frame1, text="Товщина лінії: ", bg="light gray")  # створюєм назву повзунка для товщини лінії
-color_lab.pack (side='left')
+#color_lab = tk.Label(master=frame1, text="Товщина лінії: ", bg="light gray")  # створюєм назву повзунка для товщини лінії
+#color_lab.pack (side='left')
 brush_size = 1
 color = "black"
 
@@ -117,29 +168,16 @@ def set_brush_size(value):
     global brush_size
     brush_size = int(value)
     return brush_size
-    
-
-screen_size = 1
-def set_screen_size(value):
-    global screen_size
-    screen_size = float(value)
-    c.configure(width=screen_size*600, height=screen_size*450)
 
 scale1 = Scale(master=frame1,orient=HORIZONTAL,length=300,from_=1,to=100,tickinterval=10,resolution=1, command=set_brush_size) # створюєм повзунок для товщини лінії
 scale1.pack(side='left')
 
-
-# функція зміни кольору фону
 def change_color():
     global color
     colors = askcolor(title="Tkinter Color Chooser")
     window.configure(bg=colors[1])
     color = colors[1]
     return color
-
-def del_all():
-    c.delete("all")
-    
 
 # функція малювання ліні
 def line():
@@ -245,11 +283,6 @@ def spline():
     c.bind("<B1-Motion>", p.xy1)
     c.bind("<Button-1>",p.poly2) 
     c.bind("<ButtonRelease-1>", p.xy2)
-
-
-#
-    
-
 
 
 def oval():
@@ -419,6 +452,8 @@ def text():
     rect = False
     global polygon
     polygon = False
+    global spline
+    spline = False
     class Text:
         def __init__(self):
             self.coord=[]
@@ -460,9 +495,7 @@ def text():
     t=Text()       
     c.bind("<Button-1>", t.points)
     t.width_t_box()
-    
-       
-    
+
 but_line = PhotoImage(file="line.png")
 but_line = but_line.subsample(5,5)
 
@@ -481,56 +514,34 @@ but_text = PhotoImage(file="text.png")
 but_text = but_text.subsample(5,5)
 
 but_colors = PhotoImage(file="colors.png")
-but_colors = but_colors.subsample(4,4)
-but_camera = PhotoImage(file="camera.png")
-but_camera = but_camera.subsample(2,2)
+but_colors = but_colors.subsample(5,5)
 
-
-#sel_color = Button(master=frame1, text="Вибрати колір", width=15,height=4,  command=change_color) # створюєм кнопку для вибору кльору
 sel_color = Button(master=frame1, image = but_colors,  command=change_color) # створюєм кнопку для вибору кльору
 sel_color.pack (side='left')
-sel_color = Button(master=frame1, image = but_camera,  command=set_bg) # створюєм кнопку для знімку екрана
-sel_color.pack (side='left')
 
+draw_hilight = Button(master=frame1,image = but_hilight,  command=spline) # створюєм кнопку для виділення
+draw_hilight.pack (side='left')
 
-color_lab = tk.Label(master=frame3, text="Розмір екрана: ", bg="light gray")  # створюєм назву повзунка зміни розміру екрана
-color_lab.pack (side='top')
-scale1 = Scale(master=frame3,orient=VERTICAL,length=200,from_=1,to=2.5,tickinterval=1,resolution=0.1, command=set_screen_size) # створюєм повзунок для розміру екрана
-scale1.pack(side='top')
-
-draw_hilight = Button(master=frame3,image = but_hilight,  command=spline) # створюєм кнопку для виділення
-draw_hilight.pack (side='top')
-
-draw_line = Button(master=frame3,image = but_line,  command=line) # створюєм кнопку для ліній
-draw_line.pack (side='top')
+draw_line = Button(master=frame1,image = but_line,  command=line) # створюєм кнопку для ліній
+draw_line.pack (side='left')
 #draw_spline = Button(master=frame3, text="Сплайн", width=10,height=4,  command=spline) # створюєм кнопку для сплайнів
 
-draw_oval = Button(master=frame3, image = but_oval,  command=oval) # створюєм кнопку для овалу
-draw_oval.pack (side='top')
+draw_oval = Button(master=frame1, image = but_oval,  command=oval) # створюєм кнопку для овалу
+draw_oval.pack (side='left')
 
-draw_rectangle = Button(master=frame3, image = but_rect,  command=rect) # створюєм кнопку для прямокутника прозорого
-draw_rectangle.pack (side='top')
+draw_rectangle = Button(master=frame1, image = but_rect,  command=rect) # створюєм кнопку для прямокутника прозорого
+draw_rectangle.pack (side='left')
 
-draw_polygon = Button(master=frame3, image = but_polygon,  command=polygon) # створюєм кнопку для багатокутника
-draw_polygon.pack (side='top')
+draw_polygon = Button(master=frame1, image = but_polygon,  command=polygon) # створюєм кнопку для багатокутника
+draw_polygon.pack (side='left')
 
-draw_text = Button(master=frame3, image = but_text,  command=text) # створюєм кнопку для багатокутника
-draw_text.pack (side='top')
-
-
-
-
-clear_btn = Button(master=frame1, text="Стерти все", width=15,height=4 , command=del_all)
-clear_btn.pack (side='left')
-
-
-                         
-
-
-
+draw_text = Button(master=frame1, image = but_text,  command=text) # створюєм кнопку для багатокутника
+draw_text.pack (side='left')
+                        
 def main():
-    
+            
     window.mainloop()
 
 if __name__ == "__main__":
+
     main()
